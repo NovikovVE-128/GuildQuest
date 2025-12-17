@@ -1,0 +1,31 @@
+﻿<Window x:Class="GuildQuest.Result"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Result" Height="350" Width="674" MinWidth="474" MinHeight="200"  Icon="icon_quest_long.ico">
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Button Content="Скопировать" Height="23" HorizontalAlignment="Left" Margin="12,0,0,1" Click="Button_Click" VerticalAlignment="Bottom" Width="96" />
+        <Button Content="Сохранить в CSV" Height="23" HorizontalAlignment="Left" Margin="127,0,0,1" Click="Button_Click_1" VerticalAlignment="Bottom" Width="111" />
+        <TabControl HorizontalAlignment="Stretch" Margin="0,0,0,30" Name="tabControl1" VerticalAlignment="Stretch">
+            <TabItem Header="Квест " IsEnabled="False"/>
+            <TabItem Header="Clone" Visibility="Collapsed" IsEnabled="False" Name="Clone" >
+                <DataGrid Name="grid" FrozenColumnCount="1" AllowDrop="False" AutoGenerateColumns="False"  IsReadOnly="True" ClipboardCopyMode="ExcludeHeader"  HorizontalAlignment="Stretch" ColumnWidth="*" SelectionUnit="CellOrRowHeader"  VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" SelectionMode="Extended">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn CanUserResize="True" Width="100" IsReadOnly="True" CanUserSort="True" Binding="{Binding Path=Username}" Header="Member"/>
+                        <DataGridTextColumn CanUserResize="True" Width="100" IsReadOnly="True" CanUserSort="True" Binding="{Binding Path=Since}" Header="Since"/>
+                        <DataGridTextColumn CanUserResize="True" Width="60" IsReadOnly="True" CanUserSort="True" Binding="{Binding Path=Level}" Header="Level"/>
+                        <DataGridTextColumn CanUserResize="True" Width="60" IsReadOnly="True" CanUserSort="True" Binding="{Binding Path=Active}" Header="Active"/>
+                        <DataGridTextColumn CanUserResize="True" CanUserSort="True" IsReadOnly="True" Binding="{Binding Path=Quest}" Header="Quest"/>
+                        <DataGridTextColumn CanUserResize="True" CanUserSort="True" IsReadOnly="True" Binding="{Binding Path=SubQuest}" Header="SubQuest">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="{x:Type TextBlock}">
+                                    <Setter Property="ToolTip" Value="{Binding Path=SbTrans}" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn CanUserResize="True" Width="100"  IsReadOnly="True" CanUserSort="True" Binding="{Binding Path=Status}" Header="Status"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
