@@ -182,171 +182,152 @@ namespace GuildQuest
         }
 
         public void MainAuth()
-        {
-            _cookies = new CookieCollection();
-            _authToken = "";
-            _authUser = "";
-            attepts++;
-            try
-            {
-                PostSubmitter post;
-                string res;
-                if (attepts > 5)
-                {
-                    AddToRich("Хватит пытаться :)");
-                    setButtonOn();
-                    return;
-                }
-                AddToRich("Попытка авторизации #" + attepts++);
+{
+    // Сброс состояния перед новой попыткой
+    _cookies = new CookieCollection();
+    _authToken = "";
+    _authUser = "";
+    
+    if (attepts > 5)
+    {
+        AddToRich("Превышено количество попыток авторизации.");
+        setButtonOn();
+        return;
+    }
 
-                post = new PostSubmitter
-                {
-                    Url = "https://public-ubiservices.ubi.com/v3/profiles/sessions",
-                    Type = PostSubmitter.PostTypeEnum.Post
-                };
-                post.HeaderItems.Add("Authorization", "Basic " + Convert.ToBase64String(UTF8Encoding.UTF8.GetBytes(string.Format("{0}:{1}", username.Trim(), password.Trim()))));
-                post.ContentType = "application/json";
-                post.HeaderItems.Add("Ubi-AppId", "39164658-8187-4bf4-b46c-375f68356e3b");
-                res = post.Post(ref _cookies);
-                JavaScriptSerializer jc = new JavaScriptSerializer();
-                var obj = jc.DeserializeObject(res) as Dictionary<string, object>;
-                if (obj == null) throw new Exception("General failure..");
-                if ("uplay" == (string)obj["platformType"])
-                {
-                    AddToRich("Успешная авторизация");
-                    post = new PostSubmitter
-                    {
-                        Url = "https://www.thesettlersonline.ru/ru/api/user/uplay",
-                        Type = PostSubmitter.PostTypeEnum.Post
-                    };
-                    DateTime dt = DateTime.Parse((string)obj["expiration"]).ToUniversalTime();
-                    Int32 unixTimestamp = (Int32)(dt.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-                    post.PostItems.Add("id", (string)obj["userId"]);
-                    post.PostItems.Add("ticket", (string)obj["ticket"]);
-                    post.PostItems.Add("expiration", unixTimestamp.ToString());
-                    post.PostItems.Add("undefined", (string)obj["sessionId"]);
-                    post.PostItems.Add("activated", "true");
-                    res = post.Post(ref _cookies);
-                    if (!res.Contains("OKAY"))
-                    {
-                        AddToRich("Ошибка авторизации :'(" + res);
-                        MainAuth();
-                        return;
-                    } else { 
-                        post = new PostSubmitter
-                        {
-                            Url = "https://www.thesettlersonline.ru/ru/play",
-                            Type = PostSubmitter.PostTypeEnum.Get
-                        };
-                        res = post.Post(ref _cookies);
-                        Match match = Regex.Match(res, "dsoAuthToken=([a-zA-Z0-9]+)", RegexOptions.IgnoreCase);
-                        if (match.Success)
-                        {
-                            _authToken = match.Groups[1].Value.Trim();
-                            match = Regex.Match(res, "dsoAuthUser=([0-9]+)", RegexOptions.IgnoreCase);
-                            _authUser = match.Groups[1].Value.Trim();
-                            if (!prepare(res))
-                            {
-                                AddToRich("Ошибка получения параметров");
-                                MainAuth();
-                                return;
-                            }
-                        } else
-                        {
-                            AddToRich("Ошибка получения параметров");
-                            MainAuth();
-                            return;
-                        }
-                    }
-                    if (null == _authToken || null == _authUser)
-                    {
-                        AddToRich("Не смогли получить печеньки :'(");
-                        MainAuth();
-                        return;
-                    }
-                    else
-                    {
-                        AddToRich("Печеньки получены и съедены :)");
-                        CookieCollection nc = new CookieCollection();
-                        foreach(Cookie c in _cookies)
-                        {
-                            c.Secure = false;
-                            nc.Add(c);
-                        }
-                        nc.Add(new Cookie("dsoAuthUser", _authUser, "/", ".thesettlersonline.ru"));
-                        nc.Add(new Cookie("dsoAuthToken", _authToken, "/", ".thesettlersonline.ru"));
-                        int _endpointWait = 0;
-                        while (_endpointWait < 4)
-                        {
-                            _endpointWait++;
-                            post = new PostSubmitter
-                            {
-                                Url = string.Format("{0}Z{1}", (region == "RU") ? string.Format("https://{0}.thesettlersonline.ru/", bbServer) : string.Format("https://{0}.diesiedleronline.de/", bbServer), GetFlashTime()),
-                                Type = PostSubmitter.PostTypeEnum.Post
-                            };
-                            post.PostItems.Add("dsoAuthUser", _authUser);
-                            post.PostItems.Add("dsoAuthToken", _authToken);
-                            post.PostItems.Add("zoneID", "0");
-                            res = post.Post(ref nc);
-                            string cookieName = (region == "RU") ? "thesettlersonline" : "diesiedleronline";
-                            if (res.Contains(cookieName))
-                            {
-                                _flexEndpoint = res.Trim().Replace(":443", "");
-                                AddToRich("Адрес геймсервера получен.");
-                                _parcer.Nickname = Nickname;
-                                try
-                                {
-                                    Dispatcher.BeginInvoke(new ThreadStart(delegate
-                                    {
-                                        File.WriteAllText("settings.dat", new Crypt().Encrypt(string.Format("{0}|{1}|{2}", user.Text, pass.Password, checkBox1.IsChecked.ToString()), true));
-                                    }));
-                                }
-                                catch { }
-                                GetData();
-                                return;
-                            }
-                            else
-                            {
-                                AddToRich("Ждем адрес...");
-                                Thread.Sleep(1000);
-                            }
-                        }
-                        AddToRich("Не дождались :)");
-                        setButtonOn();
-                        return;
-                    }
-                }
-                else
-                {
-                    if (res.Contains("FAILED"))
-                    {
-                        AddToRich("Логин/пароль неверны.");
-                        setButtonOn();
-                        return;
-                    }
-                    if (res.Contains("UPLAY"))
-                    {
-                        AddToRich("UPLAY не отвечает.");
-                        MainAuth();
-                    }
-                    if (res.Contains("EXCEPTION"))
-                    {
-                        AddToRich("Ошибка на странице авторизации.");
-                        MainAuth();
-                    }
-                    if (res.Trim() == "") AddToRich("Хм, пустой ответ.. странно");
-                    else AddToRich("Ошибка авторизации. ответ - " + res);
-                    MainAuth();
-                }
-            }
-            catch (Exception e)
-            {
-                AddToRich("Общая ошибка " + e.Message);
-                setButtonOn();
-                return;
-            }
+    try
+    {
+        attepts++;
+        AddToRich($"Попытка авторизации #{attepts}...");
+
+        // --- ШАГ 1: Авторизация в Ubisoft Services ---
+        PostSubmitter post = new PostSubmitter
+        {
+            Url = "https://public-ubiservices.ubi.com/v3/profiles/sessions",
+            Type = PostSubmitter.PostTypeEnum.Post,
+            ContentType = "application/json"
+        };
+
+        // Заголовки как в актуальном tso_client
+        string authBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username.Trim()}:{password.Trim()}"));
+        post.HeaderItems.Add("Authorization", "Basic " + authBase64);
+        post.HeaderItems.Add("Ubi-AppId", "39164658-8187-4bf4-b46c-375f68356e3b");
+        post.HeaderItems.Add("Ubi-RequestedPlatformType", "uplay");
+        post.HeaderItems.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TSO-Client");
+
+        string res = post.Post(ref _cookies);
+
+        if (string.IsNullOrEmpty(res) || res.Contains("errors"))
+        {
+            AddToRich("Ошибка Ubisoft: Неверный логин или пароль.");
+            setButtonOn();
             return;
         }
+
+        JavaScriptSerializer jc = new JavaScriptSerializer();
+        var ubiObj = jc.DeserializeObject(res) as Dictionary<string, object>;
+        
+        string ticket = ubiObj["ticket"].ToString();
+        string ubiSessionId = ubiObj["sessionId"].ToString();
+        string userId = ubiObj["userId"].ToString();
+        
+        // Расчет времени истечения
+        DateTime dt = DateTime.Parse(ubiObj["expiration"].ToString()).ToUniversalTime();
+        string unixExpiration = ((Int32)(dt.Subtract(new DateTime(1970, 1, 1))).TotalSeconds).ToString();
+
+        AddToRich("Ubisoft Ticket получен. Привязка к игре...");
+
+        // --- ШАГ 2: Обмен тикета на игровую сессию (API TSO) ---
+        post = new PostSubmitter
+        {
+            Url = (region == "RU") ? "https://www.thesettlersonline.ru/ru/api/user/uplay" : "https://www.thesettlersonline.com/en/api/user/uplay",
+            Type = PostSubmitter.PostTypeEnum.Post
+        };
+
+        post.PostItems.Add("id", userId);
+        post.PostItems.Add("ticket", ticket);
+        post.PostItems.Add("expiration", unixExpiration);
+        post.PostItems.Add("sessionId", ubiSessionId); // Заменили "undefined" на "sessionId"
+        post.PostItems.Add("activated", "true");
+
+        res = post.Post(ref _cookies);
+
+        if (!res.Contains("OKAY"))
+        {
+            AddToRich("Сервер игры отклонил тикет Ubisoft.");
+            MainAuth();
+            return;
+        }
+
+        // --- ШАГ 3: Получение игровых токенов (dsoAuth) ---
+        post = new PostSubmitter
+        {
+            Url = (region == "RU") ? "https://www.thesettlersonline.ru/ru/play" : "https://www.thesettlersonline.com/en/play",
+            Type = PostSubmitter.PostTypeEnum.Get
+        };
+        res = post.Post(ref _cookies);
+
+        Match mToken = Regex.Match(res, "dsoAuthToken=([a-zA-Z0-9]+)");
+        Match mUser = Regex.Match(res, "dsoAuthUser=([0-9]+)");
+
+        if (mToken.Success && mUser.Success)
+        {
+            _authToken = mToken.Groups[1].Value;
+            _authUser = mUser.Groups[1].Value;
+            AddToRich("Токены DSO получены. Входим в зону...");
+
+            // Настройка финальных куки
+            string domain = (region == "RU") ? ".thesettlersonline.ru" : ".thesettlersonline.com";
+            _cookies.Add(new Cookie("dsoAuthUser", _authUser, "/", domain));
+            _cookies.Add(new Cookie("dsoAuthToken", _authToken, "/", domain));
+
+            if (prepare(res))
+            {
+                RequestGameServer();
+            }
+        }
+        else
+        {
+            AddToRich("Ошибка: не удалось найти токены на странице.");
+            MainAuth();
+        }
+    }
+    catch (Exception ex)
+    {
+        AddToRich("Критический сбой: " + ex.Message);
+        setButtonOn();
+    }
+}
+
+// Вспомогательный метод для чистоты кода (логика получения геймсервера)
+private void RequestGameServer()
+{
+    int attemptsWait = 0;
+    while (attemptsWait < 4)
+    {
+        attemptsWait++;
+        string url = (region == "RU") 
+            ? $"https://{bbServer}.thesettlersonline.ru/{GetFlashTime()}" 
+            : $"https://{bbServer}.thesettlersonline.com/{GetFlashTime()}";
+
+        PostSubmitter post = new PostSubmitter { Url = url, Type = PostSubmitter.PostTypeEnum.Post };
+        post.PostItems.Add("dsoAuthUser", _authUser);
+        post.PostItems.Add("dsoAuthToken", _authToken);
+        post.PostItems.Add("zoneID", "0");
+
+        string res = post.Post(ref _cookies);
+        if (res.Contains("thesettlersonline"))
+        {
+            _flexEndpoint = res.Trim().Replace(":443", "");
+            AddToRich("Связь с сервером установлена!");
+            GetData(); // Запуск парсинга данных
+            return;
+        }
+        Thread.Sleep(1500);
+    }
+    AddToRich("Сервер зоны не ответил.");
+    setButtonOn();
+}
 
         public bool prepare(string htmlPage)
         {
